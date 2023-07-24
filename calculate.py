@@ -7,7 +7,6 @@ import sys
 import pickle
 import argparse
 import numpy as np
-from tqdm import tqdm
 from shapely.geometry import LineString
 
 
@@ -31,60 +30,39 @@ def get_linestring(x1, y1, x2, y2):
     return linestring
 
 
-def point_in_triangle(xy_A, xy_B, xy_C, xy_D):
-    """
-    https://www.geeksforgeeks.org/check-whether-a-given-point-lies-inside-a-triangle-or-not/
-    """
-    ABC = calculate_triangle_area(xy_A, xy_B, xy_C)
-    ABD = calculate_triangle_area(xy_A, xy_B, xy_D)
-    BCD = calculate_triangle_area(xy_B, xy_C, xy_D)
-    ACD = calculate_triangle_area(xy_A, xy_C, xy_D)
-    return ABC == ABD + BCD + ACD
-
-
-def calculate_triangle_area(xy_1, xy_2, xy_3):
-    x1, y1 = xy_1
-    x2, y2 = xy_2
-    x3, y3 = xy_3
-    surrounding_square = (max([x1, x2, x3]) - min([x1, x2, x3])) * (max([y1, y2, y3]) - min([y1, y2, y3]))
-    triangle_area = surrounding_square
-    triangle_area -= 0.5 * abs(x2 - x1) * abs(y2 - y1)
-    triangle_area -= 0.5 * abs(x3 - x2) * abs(y3 - y2)
-    triangle_area -= 0.5 * abs(x3 - x1) * abs(y3 - y1)
-
-    return triangle_area
-
-
 def intersection_to_xy_tuple(value):
     return value.xy[0][0], value.xy[1][0]
 
 
-def on_one_line(xy_A, xy_B, xy_C):
-    AB = np.sqrt(abs(xy_B[0] - xy_A[0])**2 + abs(xy_B[1] - xy_A[1])**2)
-    BC = np.sqrt(abs(xy_C[0] - xy_B[0])**2 + abs(xy_C[1] - xy_B[1])**2)
-    AC = np.sqrt(abs(xy_C[0] - xy_A[0])**2 + abs(xy_C[1] - xy_A[1])**2)
-    len_list = [AB, BC, AC]
-    longest_len = max(len_list)
-    len_list.remove(longest_len)
-    return longest_len == sum(len_list)
+def sort_intersections_on_edge(intersection_list):
+    # Since edge is linear, sort on x values
+    x_list = [xy[0] for xy in intersection_list]
+    sorted_intersection_list = []
+    for x in sorted(x_list):
+        for xy in intersection_list:
+            if x == xy[0]:
+                sorted_intersection_list.append(xy)
+    return sorted_intersection_list
 
 
-def on_line_AC(xy_A, xy_C, xy_B, precision = 1e-10):
-    # Precision parameter necessary when dealing with values such as 1/3, infinite number of decimals
-    AB = np.sqrt(abs(xy_B[0] - xy_A[0])**2 + abs(xy_B[1] - xy_A[1])**2)
-    BC = np.sqrt(abs(xy_C[0] - xy_B[0])**2 + abs(xy_C[1] - xy_B[1])**2)
-    AC = np.sqrt(abs(xy_C[0] - xy_A[0])**2 + abs(xy_C[1] - xy_A[1])**2)
-    return AC - precision < AB + BC < AC + precision
+def search_triangles(segments):
+    triangles = []
+    for i, segment_1 in enumerate(segments):
+        segments_2 = remove_by_indices(segments, [i])
+        for j, segment_2 in enumerate(segments_2):
+            segments_3 = remove_by_indices(segments_2, [i, j])
+            for k, segment_3 in enumerate(segments_3):
+                intersections = [segment_1[0], segment_1[1],
+                                 segment_2[0], segment_2[1],
+                                 segment_3[0], segment_3[1]]
+                unique_intersections = list(set(intersections))
+                if len(unique_intersections) == 3:
+                    triangles.append(tuple(sorted(unique_intersections)))
 
+    # Remove duplicate triangles
+    unique_triangles = list(set(triangles))
 
-def triangle_edge_in_network(xy_1, xy_2, xy_3, edges_dict):
-    overlap_count = 0
-    for point_1, point_2 in [[xy_1, xy_2], [xy_2, xy_3], [xy_1, xy_3]]:
-        for A, C in edges_dict.values():
-            if on_line_AC(A, C, point_1) and on_line_AC(A, C, point_2):
-                overlap_count += 1
-                break
-    return overlap_count == 3
+    return unique_triangles
 
 
 if __name__ == "__main__":
@@ -127,61 +105,35 @@ if __name__ == "__main__":
         for node_left_i, node_left_loc in enumerate(node_loc_dict.get(f'layer_{layer_nr}')):
             for node_right_i, node_right_loc in enumerate(node_loc_dict.get(f'layer_{layer_nr+1}')):
                 linestring = get_linestring(x, node_left_loc, x+1, node_right_loc)
-                edges_dict.update({f'layer_{layer_nr}_{node_left_i}_to_{node_right_i}': ((x, node_left_loc), (x+1, node_right_loc))})
-                linestring_dict.update({f'layer_{layer_nr}_{node_left_i}_to_{node_right_i}': linestring})
+                edges_dict.update({f'layer_{layer_nr}_L{node_left_i}_to_R{node_right_i}': ((x, node_left_loc), (x+1, node_right_loc))})
+                linestring_dict.update({f'layer_{layer_nr}_L{node_left_i}_to_R{node_right_i}': linestring})
 
     # Save edges
     with open(os.path.join(output_dir_path, 'edges.pkl'), 'wb') as f:
         pickle.dump(edges_dict, f)
 
     # Get intersections
-    intersections = []
+    intersections_dict = {}
     for i, (from_to, linestring) in enumerate(linestring_dict.items()):
         other_linestrings = remove_by_indices(list(linestring_dict.values()), [i])
+        edge_intersections = []
         for j, other_linestring in enumerate(other_linestrings):
             intersection = linestring.intersection(other_linestring)
             if intersection.geom_type == 'Point':
-                # Append if intersection not already found
-                if not intersection in intersections:
-                    intersections.append(intersection)
+                intersection = intersection_to_xy_tuple(intersection)
+                if intersection not in edge_intersections:
+                    edge_intersections.append(intersection)
+        intersections_dict.update({from_to: sort_intersections_on_edge(edge_intersections)})
 
-    # Get shapes enclosed by edges
-    triangle_candidates = []
-    triangles_intersections_list = []
-    other_intersections_list = []
-    for i in range(len(intersections)):
-        for j in range(len(intersections)):
-            for k in range(len(intersections)):
-                if i == j or j == k or i == k:
-                    continue
+    # Get line segments enclosed by 2 intersections
+    segments = []
+    for edge_intersections in intersections_dict.values():
+        for i in range(len(edge_intersections) - 1):
+            segments.append((edge_intersections[i], edge_intersections[i+1]))
 
-                triangles_intersections_list.append([intersections[i], intersections[j], intersections[k]])
-                other_intersections_list.append(remove_by_indices(intersections, [i, j, k]))
-
-    for triangle_intersections, other_intersections in \
-            tqdm(zip(triangles_intersections_list, other_intersections_list), total=len(triangles_intersections_list)):
-        xy_1 = intersection_to_xy_tuple(triangle_intersections[0])
-        xy_2 = intersection_to_xy_tuple(triangle_intersections[1])
-        xy_3 = intersection_to_xy_tuple(triangle_intersections[2])
-
-        smallest_triangle_found = True
-        for other_intersection in other_intersections:
-            xy_test = intersection_to_xy_tuple(other_intersection)
-            if on_one_line(xy_1, xy_2, xy_3):
-                smallest_triangle_found = False
-            else:
-                if on_line_AC(xy_1, xy_2, xy_test) or \
-                        on_line_AC(xy_1, xy_3, xy_test) or \
-                        on_line_AC(xy_2, xy_3, xy_test):
-                    smallest_triangle_found = False
-                if point_in_triangle(xy_1, xy_2, xy_3, xy_test):
-                    smallest_triangle_found = False
-                if not triangle_edge_in_network(xy_1, xy_2, xy_3, edges_dict):
-                    smallest_triangle_found = False
-        if smallest_triangle_found:
-            triangle = [xy_1, xy_2, xy_3]
-            triangle_candidates.append(triangle)
+    # Search for triangles
+    triangles = search_triangles(segments)
 
     # Save triangles
     with open(os.path.join(output_dir_path, 'triangles.pkl'), 'wb') as f:
-        pickle.dump(triangle_candidates, f)
+        pickle.dump(triangles, f)
