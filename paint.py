@@ -1,5 +1,8 @@
 """
 Create figure
+
+Sources:
+- https://matplotlib.org/stable/gallery/shapes_and_collections/patch_collection.html#sphx-glr-gallery-shapes-and-collections-patch-collection-py
 """
 
 import os

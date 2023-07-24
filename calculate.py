@@ -185,7 +185,3 @@ if __name__ == "__main__":
     # Save triangles
     with open(os.path.join(output_dir_path, 'triangles.pkl'), 'wb') as f:
         pickle.dump(triangle_candidates, f)
-
-##########
-# Other sources:
-# https://matplotlib.org/stable/gallery/shapes_and_collections/patch_collection.html#sphx-glr-gallery-shapes-and-collections-patch-collection-py
