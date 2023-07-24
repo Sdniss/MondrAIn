@@ -48,7 +48,6 @@ def sort_intersections_on_edge(intersection_list):
 
 def search_triangles(segments):
     triangles = []
-    print('>>> Searching triangles...')
     for i, segment_1 in tqdm(enumerate(segments), total=len(segments)):
         segments_2 = remove_by_indices(segments, [i])
         for j, segment_2 in enumerate(segments_2):
@@ -69,7 +68,6 @@ def search_triangles(segments):
 
 def search_quadrilaterals(segments, triangles):
     quadrilaterals = []
-    print('>>> Searching quadrilaterals...')
     for i, segment_1 in tqdm(enumerate(segments), total=len(segments)):
         segments_2 = remove_by_indices(segments, [i])
         for j, segment_2 in enumerate(segments_2):
@@ -209,18 +207,34 @@ if __name__ == "__main__":
         intersections_dict.update({from_to: sort_intersections_on_edge(edge_intersections)})
 
     # Get line segments enclosed by 2 intersections
-    segments = []
-    for edge_intersections in intersections_dict.values():
+    segments_dict = {}
+    for from_to, edge_intersections in intersections_dict.items():
+        segments = []
         for i in range(len(edge_intersections) - 1):
             segments.append((edge_intersections[i], edge_intersections[i+1]))
+        segments_dict.update({from_to: segments})
 
     # Search for triangles
-    triangles = search_triangles(segments)
+    print('>>> Searching triangles...')
+    triangles = []
+    for layer_nr in range(len(layer_sizes) - 1):
+        segments_between_two_layers = []
+        for key in list(filter(lambda x: f'layer_{layer_nr}' in x, list(segments_dict.keys()))):
+            segments_between_two_layers.extend(segments_dict.get(key))
+        print(f'>>> - Between layer {layer_nr} and {layer_nr + 1}...')
+        triangles.extend(search_triangles(segments_between_two_layers))
     shapes = triangles
 
     if args.look_for_quadrilaterals:
         # Search for quadrilaterals
-        quadrilaterals = search_quadrilaterals(segments, triangles)
+        print('>>> Searching quadrilaterals...')
+        quadrilaterals = []
+        for layer_nr in range(len(layer_sizes) - 1):
+            segments_between_two_layers = []
+            for key in list(filter(lambda x: f'layer_{layer_nr}' in x, list(segments_dict.keys()))):
+                segments_between_two_layers.extend(segments_dict.get(key))
+            print(f'>>> - Between layer {layer_nr} and {layer_nr + 1}...')
+            quadrilaterals.extend(search_quadrilaterals(segments_between_two_layers, triangles))
 
         # Sort coordinates of quadrilaterals for plotting
         # --> x values of first 3 coordinates should be increasing, then in between 1st and 3rd
