@@ -2,13 +2,13 @@
 Perform calculations and check visually
 """
 
-from tqdm import tqdm
+import os
+import sys
+import pickle
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
+from tqdm import tqdm
 from shapely.geometry import LineString
-from matplotlib.collections import PatchCollection
-from matplotlib.patches import Polygon
 
 
 def remove_by_indices(my_list, indices):
@@ -18,17 +18,14 @@ def remove_by_indices(my_list, indices):
     return my_list
 
 
-def plot_edge(ax, x1, y1, x2, y2, s):
-    """ Plot edge
-    Sources:
-    - https://stackoverflow.com/questions/35363444/plotting-lines-connecting-points
-    - https://stackoverflow.com/questions/28766692/how-to-find-the-intersection-of-two-graphs
+def get_linestring(x1, y1, x2, y2):
+    """ Get LineString
+    Source: https://stackoverflow.com/questions/28766692/how-to-find-the-intersection-of-two-graphs
     """
 
-    ax.plot([x1, x2], [y1, y2], '-', linewidth=s, color='black')
     linestring = LineString(np.column_stack(([x1, x2], [y1, y2])))
 
-    return ax, linestring
+    return linestring
 
 
 def point_in_triangle(xy_A, xy_B, xy_C, xy_D):
@@ -91,13 +88,14 @@ if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--layer_sizes', nargs='+', help='Number of nodes in each layer')
-    parser.add_argument('--line_thickness', type=int, help='Thickness of lines (nodes and edges)')
     args = parser.parse_args()
     layer_sizes = list(map(lambda x: int(x), args.layer_sizes))
-    line_thickness = args.line_thickness
 
-    # Initialise figure
-    fig, ax = plt.subplots()
+    # Output directory
+    script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
+    output_dir_path = os.path.join(script_directory, 'output')
+    if not os.path.exists(output_dir_path):
+        os.mkdir(output_dir_path)
 
     # Get all potential node locations
     max_layer_size = max(layer_sizes)
@@ -114,6 +112,10 @@ if __name__ == "__main__":
         # Update dict
         node_loc_dict.update({f'layer_{layer_nr}': node_locations})
 
+    # Save node locations
+    with open(os.path.join(output_dir_path, 'nodes.pkl'), 'wb') as f:
+        pickle.dump(node_loc_dict, f)
+
     # Get all edges
     edges_dict = {}
     linestring_dict = {}
@@ -121,9 +123,13 @@ if __name__ == "__main__":
         x = layer_nr
         for node_left_i, node_left_loc in enumerate(node_loc_dict.get(f'layer_{layer_nr}')):
             for node_right_i, node_right_loc in enumerate(node_loc_dict.get(f'layer_{layer_nr+1}')):
-                ax, linestring = plot_edge(ax, x, node_left_loc, x+1, node_right_loc, line_thickness)
+                linestring = get_linestring(x, node_left_loc, x+1, node_right_loc)
                 edges_dict.update({f'layer_{layer_nr}_{node_left_i}_to_{node_right_i}': ((x, node_left_loc), (x+1, node_right_loc))})
                 linestring_dict.update({f'layer_{layer_nr}_{node_left_i}_to_{node_right_i}': linestring})
+
+    # Save edges
+    with open(os.path.join(output_dir_path, 'edges.pkl'), 'wb') as f:
+        pickle.dump(edges_dict, f)
 
     # Get intersections
     intersections = []
@@ -135,10 +141,9 @@ if __name__ == "__main__":
                 # Append if intersection not already found
                 if not intersection in intersections:
                     intersections.append(intersection)
-                    plt.plot(*intersection.xy, 'o', color = 'red')
 
     # Get shapes enclosed by edges
-    patches_triangle = []
+    triangle_candidates = []
     triangles_intersections_list = []
     other_intersections_list = []
     for i in range(len(intersections)):
@@ -171,12 +176,12 @@ if __name__ == "__main__":
                 if not triangle_edge_in_network(xy_1, xy_2, xy_3, edges_dict):
                     smallest_triangle_found = False
         if smallest_triangle_found:
-            polygon = Polygon([xy_1, xy_2, xy_3], closed=True)
-            patches_triangle.append(polygon)
+            triangle = [xy_1, xy_2, xy_3]
+            triangle_candidates.append(triangle)
 
-    p = PatchCollection(patches_triangle, alpha=0.4)
-    ax.add_collection(p)
-    plt.show()
+    # Save triangles
+    with open(os.path.join(output_dir_path, 'triangles.pkl'), 'wb') as f:
+        pickle.dump(triangle_candidates, f)
 
 ##########
 # Other sources:
