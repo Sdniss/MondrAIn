@@ -11,11 +11,14 @@ from tqdm import tqdm
 from shapely.geometry import LineString
 
 
-def remove_by_indices(my_list, indices):
-    for i in indices:
-        my_list = my_list[:i] + my_list[i + 1:]
+def remove_by_indices(my_list, indices_to_remove):
+    all_indices = range(len(my_list))
+    indices_to_keep = [i for i in all_indices if not i in indices_to_remove]
+    new_list = []
+    for i in indices_to_keep:
+        new_list.append(my_list[i])
 
-    return my_list
+    return new_list
 
 
 def get_linestring(x1, y1, x2, y2):
