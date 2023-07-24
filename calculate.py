@@ -157,9 +157,9 @@ if __name__ == "__main__":
 
     # Output directory
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
-    output_dir_path = os.path.join(script_directory, 'output')
+    output_dir_path = os.path.join(script_directory, 'output', '_'.join([str(x) for x in layer_sizes]))
     if not os.path.exists(output_dir_path):
-        os.mkdir(output_dir_path)
+        os.makedirs(output_dir_path)
 
     # Get all potential node locations
     max_layer_size = max(layer_sizes)

@@ -48,16 +48,19 @@ if __name__ == "__main__":
                         help='Save figure?')
     parser.add_argument('--dpi', type=int, default=300,
                         help='Dots per inch, resolution of figure')
+    parser.add_argument('--layer_sizes', nargs='+',
+                        help='Number of nodes in each layer')
     args = parser.parse_args()
     line_thickness = args.line_thickness
     shape_density = args.shape_density
     node_size = args.node_size
     random_seed = args.random_seed
     dpi = args.dpi
+    layer_sizes = args.layer_sizes
 
     # Load calculation outputs
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
-    output_dir_path = os.path.join(script_directory, 'output')
+    output_dir_path = os.path.join(script_directory, 'output', '_'.join([str(x) for x in layer_sizes]))
     with open(os.path.join(output_dir_path, 'nodes.pkl'), 'rb') as f:
         node_loc_dict = pickle.load(f)
     with open(os.path.join(output_dir_path, 'edges.pkl'), 'rb') as f:
