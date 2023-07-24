@@ -7,6 +7,7 @@ import sys
 import pickle
 import argparse
 import numpy as np
+from tqdm import tqdm
 from shapely.geometry import LineString
 
 
@@ -47,7 +48,8 @@ def sort_intersections_on_edge(intersection_list):
 
 def search_triangles(segments):
     triangles = []
-    for i, segment_1 in enumerate(segments):
+    print('>>> Searching triangles...')
+    for i, segment_1 in tqdm(enumerate(segments), total=len(segments)):
         segments_2 = remove_by_indices(segments, [i])
         for j, segment_2 in enumerate(segments_2):
             segments_3 = remove_by_indices(segments_2, [i, j])
@@ -65,10 +67,91 @@ def search_triangles(segments):
     return unique_triangles
 
 
+def search_quadrilaterals(segments, triangles):
+    quadrilaterals = []
+    print('>>> Searching quadrilaterals...')
+    for i, segment_1 in tqdm(enumerate(segments), total=len(segments)):
+        segments_2 = remove_by_indices(segments, [i])
+        for j, segment_2 in enumerate(segments_2):
+            segments_3 = remove_by_indices(segments_2, [i, j])
+            for k, segment_3 in enumerate(segments_3):
+                segments_4 = remove_by_indices(segments_3, [i, j, k])
+                for l, segment_4 in enumerate(segments_4):
+                    intersections = [segment_1[0], segment_1[1],
+                                     segment_2[0], segment_2[1],
+                                     segment_3[0], segment_3[1],
+                                     segment_4[0], segment_4[1]]
+                    unique_intersections = list(set(intersections))
+                    if len(unique_intersections) == 4:
+                        # Do not add triangles where one edge is made of 2 edges
+                        two_edges_create_one = False
+                        for i in range(4):
+                            if on_one_line(remove_by_indices(unique_intersections, [i])):
+                                two_edges_create_one = True
+                                break
+
+                        # Make sure quadrilateral does not contain triangles
+                        # Source: https://www.geeksforgeeks.org/python-check-if-one-list-is-subset-of-other/
+                        triangle_in_quadrilateral = False
+                        for triangle in triangles:
+                            if sum([xy in unique_intersections for xy in triangle]) == 3:
+                                triangle_in_quadrilateral = True
+                                break
+
+                        if not two_edges_create_one and is_enclosed_quadrilateral(intersections) and \
+                            not triangle_in_quadrilateral:
+                            quadrilaterals.append(tuple(sorted(unique_intersections)))
+
+    # Remove duplicate quadrilaterals
+    unique_quadrilaterals = list(set(quadrilaterals))
+
+    return unique_quadrilaterals
+
+
+def on_one_line(coordinates, precision=1e-5):
+    xy_A, xy_B, xy_C = coordinates
+    AB = np.sqrt(abs(xy_B[0] - xy_A[0])**2 + abs(xy_B[1] - xy_A[1])**2)
+    BC = np.sqrt(abs(xy_C[0] - xy_B[0])**2 + abs(xy_C[1] - xy_B[1])**2)
+    AC = np.sqrt(abs(xy_C[0] - xy_A[0])**2 + abs(xy_C[1] - xy_A[1])**2)
+    len_list = [AB, BC, AC]
+    longest_len = max(len_list)
+    len_list.remove(longest_len)
+    return sum(len_list) - precision < longest_len < sum(len_list) + precision
+
+
+def is_enclosed_quadrilateral(coordinates):
+    unique_coordinates = set(coordinates)
+    coordinate_count_list = []
+    for unique_coordinate in unique_coordinates:
+        coordinate_count = 0
+        for coordinate in coordinates:
+            coordinate_count += coordinate == unique_coordinate
+        coordinate_count_list.append(coordinate_count)
+    return coordinate_count_list == [2, 2, 2, 2]
+
+
+def sort_quadrilaterals_for_plotting(quadrilaterals):
+    sorted_quadrilaterals = []
+    for quadrilateral in quadrilaterals:
+        sorted_quadrilateral = []
+        x_values = [xy[0] for xy in quadrilateral]
+        i_max = np.argmax(x_values)
+        i_min = np.argmin(x_values)
+        i_remaining_list = remove_by_indices(range(len(x_values)), [i_max, i_min])
+        sort_indices = [i_min, i_remaining_list[0], i_max, i_remaining_list[1]]
+        for i in sort_indices:
+            sorted_quadrilateral.append(quadrilateral[i])
+        sorted_quadrilaterals.append(sorted_quadrilateral)
+    return sorted_quadrilaterals
+
+
 if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--layer_sizes', nargs='+', help='Number of nodes in each layer')
+    parser.add_argument('--layer_sizes', nargs='+',
+                        help='Number of nodes in each layer')
+    parser.add_argument('--look_for_quadrilaterals', action='store_true',
+                        help='Look for quadrilaterals?')
     args = parser.parse_args()
     layer_sizes = list(map(lambda x: int(x), args.layer_sizes))
 
@@ -133,7 +216,17 @@ if __name__ == "__main__":
 
     # Search for triangles
     triangles = search_triangles(segments)
+    shapes = triangles
 
-    # Save triangles
-    with open(os.path.join(output_dir_path, 'triangles.pkl'), 'wb') as f:
-        pickle.dump(triangles, f)
+    if args.look_for_quadrilaterals:
+        # Search for quadrilaterals
+        quadrilaterals = search_quadrilaterals(segments, triangles)
+
+        # Sort coordinates of quadrilaterals for plotting
+        # --> x values of first 3 coordinates should be increasing, then in between 1st and 3rd
+        quadrilaterals = sort_quadrilaterals_for_plotting(quadrilaterals)
+        shapes += quadrilaterals
+
+    # Save shapes
+    with open(os.path.join(output_dir_path, 'shapes.pkl'), 'wb') as f:
+        pickle.dump(shapes, f)

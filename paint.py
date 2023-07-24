@@ -35,11 +35,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--line_thickness', type=int, default = 1,
                         help='Thickness of lines (nodes and edges)')
-    parser.add_argument('--triangle_density', type=float, default=0.2,
-                        help='Fraction of enclosed triangles filled with colors')
+    parser.add_argument('--shape_density', type=float, default=0.2,
+                        help='Fraction of enclosed shapes filled with colors')
     args = parser.parse_args()
     line_thickness = args.line_thickness
-    triangle_density = args.triangle_density
+    shape_density = args.shape_density
 
     # Load calculation outputs
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -48,8 +48,8 @@ if __name__ == "__main__":
         node_loc_dict = pickle.load(f)
     with open(os.path.join(output_dir_path, 'edges.pkl'), 'rb') as f:
         edges_dict = pickle.load(f)
-    with open(os.path.join(output_dir_path, 'triangles.pkl'), 'rb') as f:
-        triangle_candidates = pickle.load(f)
+    with open(os.path.join(output_dir_path, 'shapes.pkl'), 'rb') as f:
+        shape_candidates = pickle.load(f)
 
     # Initialise figure
     fig, ax = plt.subplots()
@@ -61,13 +61,13 @@ if __name__ == "__main__":
         x2, y2 = xy2
         plot_edge(ax, x1, y1, x2, y2, line_thickness)
 
-    # Plot triangles
-    np.random.shuffle(triangle_candidates)
-    n_triangles = round(len(triangle_candidates) * triangle_density)  # CAVE: np.round() method rounds 0.5 down
-    for triangle, color in zip(triangle_candidates[:n_triangles],
-                               ['#E70503', '#0300AD', '#FDDE06', '#050103'] * n_triangles):
+    # Plot shapes
+    np.random.shuffle(shape_candidates)
+    n_shapes = round(len(shape_candidates) * shape_density)  # CAVE: np.round() method rounds 0.5 down
+    for shape, color in zip(shape_candidates[:n_shapes],
+                               ['#E70503', '#0300AD', '#FDDE06', '#050103'] * n_shapes):
         # Colors source: https://color.adobe.com/De-Stijl---Piet-Mondrian-color-theme-6225068/
-        polygon = Polygon(triangle, closed = True)
+        polygon = Polygon(shape, closed = True)
         p = PatchCollection([polygon], color=color)
         ax.add_collection(p)
     date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
