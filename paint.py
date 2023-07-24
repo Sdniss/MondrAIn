@@ -6,6 +6,7 @@ Sources:
 """
 
 import os
+import re
 import sys
 import pickle
 import argparse
@@ -39,9 +40,12 @@ if __name__ == "__main__":
                         help='Fraction of enclosed shapes filled with colors')
     parser.add_argument('--show', action='store_true',
                         help='Show image?')
+    parser.add_argument('--node_size', type=float, default=8,
+                        help='Size of the nodes')
     args = parser.parse_args()
     line_thickness = args.line_thickness
     shape_density = args.shape_density
+    node_size = args.node_size
 
     # Load calculation outputs
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -55,6 +59,12 @@ if __name__ == "__main__":
 
     # Initialise figure
     fig, ax = plt.subplots()
+
+    # Plot nodes
+    for layer_id, layer_y_locs in node_loc_dict.items():
+        x = int(re.findall('[0-9]+', layer_id)[0])
+        for y in layer_y_locs:
+            ax.plot(x, y, 'o', markersize = node_size, color='black')
 
     # Plot edges
     for edge in edges_dict.values():
