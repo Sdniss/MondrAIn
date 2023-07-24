@@ -44,11 +44,14 @@ if __name__ == "__main__":
                         help='Size of the nodes')
     parser.add_argument('--random_seed', type=int, default=None,
                         help='Random seed for reproducibility of a figure')
+    parser.add_argument('--dpi', type=int, default=300,
+                        help='Dots per inch, resolution of figure')
     args = parser.parse_args()
     line_thickness = args.line_thickness
     shape_density = args.shape_density
     node_size = args.node_size
     random_seed = args.random_seed
+    dpi = args.dpi
 
     # Load calculation outputs
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -88,10 +91,13 @@ if __name__ == "__main__":
         p = PatchCollection([polygon], color=color)
         ax.add_collection(p)
 
+    # Remove axes
+    ax.axis('off')
+
     # Save
     date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
     filename = f'MondrAIn_{date}_random_seed_{random_seed}.png'
-    plt.savefig(os.path.join(output_dir_path, filename))
+    plt.savefig(os.path.join(output_dir_path, filename), dpi=dpi)
 
     # Show?
     if args.show:
