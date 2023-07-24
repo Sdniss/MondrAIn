@@ -101,7 +101,7 @@ if __name__ == "__main__":
     if args.save:
         date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
         filename = f'MondrAIn_{date}_random_seed_{random_seed}.png'
-        plt.savefig(os.path.join(output_dir_path, filename), dpi=dpi)
+        plt.savefig(os.path.join(output_dir_path, filename), dpi=dpi, transparent=True)
 
     # Show?
     if args.show:
