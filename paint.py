@@ -44,6 +44,8 @@ if __name__ == "__main__":
                         help='Size of the nodes')
     parser.add_argument('--random_seed', type=int, default=None,
                         help='Random seed for reproducibility of a figure')
+    parser.add_argument('--save', action='store_true',
+                        help='Save figure?')
     parser.add_argument('--dpi', type=int, default=300,
                         help='Dots per inch, resolution of figure')
     args = parser.parse_args()
@@ -96,9 +98,10 @@ if __name__ == "__main__":
     ax.axis('off')
 
     # Save
-    date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
-    filename = f'MondrAIn_{date}_random_seed_{random_seed}.png'
-    plt.savefig(os.path.join(output_dir_path, filename), dpi=dpi)
+    if args.save:
+        date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
+        filename = f'MondrAIn_{date}_random_seed_{random_seed}.png'
+        plt.savefig(os.path.join(output_dir_path, filename), dpi=dpi)
 
     # Show?
     if args.show:
