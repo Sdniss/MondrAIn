@@ -66,12 +66,6 @@ if __name__ == "__main__":
     # Initialise figure
     fig, ax = plt.subplots()
 
-    # Plot nodes
-    for layer_id, layer_y_locs in node_loc_dict.items():
-        x = int(re.findall('[0-9]+', layer_id)[0])
-        for y in layer_y_locs:
-            ax.plot(x, y, 'o', markersize = node_size, color='black')
-
     # Plot edges
     for edge in edges_dict.values():
         xy1, xy2 = edge
@@ -90,6 +84,12 @@ if __name__ == "__main__":
         polygon = Polygon(shape, closed = True)
         p = PatchCollection([polygon], color=color)
         ax.add_collection(p)
+
+    # Plot nodes
+    for layer_id, layer_y_locs in node_loc_dict.items():
+        x = int(re.findall('[0-9]+', layer_id)[0])
+        for y in layer_y_locs:
+            ax.plot(x, y, 'o', markersize = node_size, color='black')
 
     # Remove axes
     ax.axis('off')
