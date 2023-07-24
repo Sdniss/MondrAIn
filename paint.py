@@ -42,10 +42,13 @@ if __name__ == "__main__":
                         help='Show image?')
     parser.add_argument('--node_size', type=float, default=8,
                         help='Size of the nodes')
+    parser.add_argument('--random_seed', type=int, default=None,
+                        help='Random seed for reproducibility of a figure')
     args = parser.parse_args()
     line_thickness = args.line_thickness
     shape_density = args.shape_density
     node_size = args.node_size
+    random_seed = args.random_seed
 
     # Load calculation outputs
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -74,6 +77,8 @@ if __name__ == "__main__":
         plot_edge(ax, x1, y1, x2, y2, line_thickness)
 
     # Plot shapes
+    if random_seed is not None:
+        np.random.seed(random_seed)
     np.random.shuffle(shape_candidates)
     n_shapes = round(len(shape_candidates) * shape_density)  # CAVE: np.round() method rounds 0.5 down
     for shape, color in zip(shape_candidates[:n_shapes],
@@ -82,7 +87,12 @@ if __name__ == "__main__":
         polygon = Polygon(shape, closed = True)
         p = PatchCollection([polygon], color=color)
         ax.add_collection(p)
+
+    # Save
     date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
-    plt.savefig(os.path.join(output_dir_path, f'MondrAIn_{date}.png'))
+    filename = f'MondrAIn_{date}_random_seed_{random_seed}.png'
+    plt.savefig(os.path.join(output_dir_path, filename))
+
+    # Show?
     if args.show:
         plt.show()
