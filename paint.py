@@ -70,6 +70,5 @@ if __name__ == "__main__":
         polygon = Polygon(triangle, closed = True)
         p = PatchCollection([polygon], color=color)
         ax.add_collection(p)
-    plt.show()
     date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
     plt.savefig(os.path.join(output_dir_path, f'MondrAIn_{date}.png'))
