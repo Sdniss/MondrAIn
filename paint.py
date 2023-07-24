@@ -37,6 +37,8 @@ if __name__ == "__main__":
                         help='Thickness of lines (nodes and edges)')
     parser.add_argument('--shape_density', type=float, default=0.2,
                         help='Fraction of enclosed shapes filled with colors')
+    parser.add_argument('--show', action='store_true',
+                        help='Show image?')
     args = parser.parse_args()
     line_thickness = args.line_thickness
     shape_density = args.shape_density
@@ -72,3 +74,5 @@ if __name__ == "__main__":
         ax.add_collection(p)
     date = dt.datetime.strftime(dt.datetime.now(), '%Y%M%d-%H%M%S')
     plt.savefig(os.path.join(output_dir_path, f'MondrAIn_{date}.png'))
+    if args.show:
+        plt.show()
