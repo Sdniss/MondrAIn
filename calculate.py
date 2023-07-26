@@ -150,8 +150,11 @@ if __name__ == "__main__":
                         help='Number of nodes in each layer')
     parser.add_argument('--look_for_quadrilaterals', action='store_true',
                         help='Look for quadrilaterals?')
+    parser.add_argument('--custom_x_locations', nargs='+', default=None,
+                        help='List of x locations of the layers')
     args = parser.parse_args()
     layer_sizes = list(map(lambda x: int(x), args.layer_sizes))
+    custom_x_locations = [float(i) for i in args.custom_x_locations]
 
     # Output directory
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -161,15 +164,20 @@ if __name__ == "__main__":
 
     # Get all potential node locations
     max_layer_size = max(layer_sizes)
-    all_node_locations = range(max_layer_size * 2 - 1)  #np.linspace(0, 1, num=max_layer_size * 2 - 1)
+    all_node_locations_y = range(max_layer_size * 2 - 1)  #np.linspace(0, 1, num=max_layer_size * 2 - 1)
+    if custom_x_locations is not None:
+        all_node_locations_x = custom_x_locations
+    else:
+        all_node_locations_x = range(len(layer_sizes))
 
     # Get all node locations per layer
     node_loc_dict = {}
     for layer_nr, layer_size in enumerate(layer_sizes):
         # Get the locations of the nodes in the layer
         node_span_length = layer_size * 2 - 1
-        offset = (len(all_node_locations) - node_span_length) / 2
-        node_locations = [all_node_locations[int(offset + i * 2)] for i in range(layer_size)]
+        offset = (len(all_node_locations_y) - node_span_length) / 2
+        node_locations = [(all_node_locations_x[layer_nr],
+                           all_node_locations_y[int(offset + i * 2)]) for i in range(layer_size)]
 
         # Update dict
         node_loc_dict.update({f'layer_{layer_nr}': node_locations})
@@ -181,17 +189,17 @@ if __name__ == "__main__":
     # Get all edges
     edges_dict = {}
     linestring_dict = {}
-    for layer_nr in range(len(node_loc_dict) - 1):
-        x = layer_nr
-        for node_left_i, node_left_loc in enumerate(node_loc_dict.get(f'layer_{layer_nr}')):
-            for node_right_i, node_right_loc in enumerate(node_loc_dict.get(f'layer_{layer_nr+1}')):
-                linestring = get_linestring(x, node_left_loc, x+1, node_right_loc)
-                edges_dict.update({f'layer_{layer_nr}_L{node_left_i}_to_R{node_right_i}': ((x, node_left_loc), (x+1, node_right_loc))})
+    for i, layer_nr in enumerate(range(len(node_loc_dict) - 1)):
+        for node_left_i, node_left_xy in enumerate(node_loc_dict.get(f'layer_{layer_nr}')):
+            for node_right_i, node_right_xy in enumerate(node_loc_dict.get(f'layer_{layer_nr+1}')):
+                node_left_x, node_left_y = node_left_xy
+                node_right_x, node_right_y = node_right_xy
+                linestring = get_linestring(node_left_x, node_left_y, node_right_x, node_right_y)
                 linestring_dict.update({f'layer_{layer_nr}_L{node_left_i}_to_R{node_right_i}': linestring})
 
     # Save edges
     with open(os.path.join(output_dir_path, 'edges.pkl'), 'wb') as f:
-        pickle.dump(edges_dict, f)
+        pickle.dump(linestring_dict, f)
 
     # Get intersections
     intersections_dict = {}

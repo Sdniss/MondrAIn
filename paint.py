@@ -6,7 +6,6 @@ Sources:
 """
 
 import os
-import re
 import sys
 import pickle
 import argparse
@@ -15,20 +14,21 @@ import datetime as dt
 import matplotlib.pyplot as plt
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Polygon
-from shapely.geometry import LineString
 
 
-def plot_edge(ax, x1, y1, x2, y2, s):
+def plot_edge(ax, linestring, s):
     """ Plot edge
     Sources:
     - https://stackoverflow.com/questions/35363444/plotting-lines-connecting-points
     - https://stackoverflow.com/questions/28766692/how-to-find-the-intersection-of-two-graphs
     """
 
+    x_locs, y_locs = linestring.xy
+    x1, x2 = x_locs
+    y1, y2 = y_locs
     ax.plot([x1, x2], [y1, y2], '-', linewidth=s, color='black')
-    linestring = LineString(np.column_stack(([x1, x2], [y1, y2])))
 
-    return ax, linestring
+    return ax
 
 
 if __name__ == "__main__":
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     with open(os.path.join(output_dir_path, 'nodes.pkl'), 'rb') as f:
         node_loc_dict = pickle.load(f)
     with open(os.path.join(output_dir_path, 'edges.pkl'), 'rb') as f:
-        edges_dict = pickle.load(f)
+        linestring_dict = pickle.load(f)
     with open(os.path.join(output_dir_path, 'shapes.pkl'), 'rb') as f:
         shape_candidates = pickle.load(f)
 
@@ -79,11 +79,8 @@ if __name__ == "__main__":
     fig.set_figheight(args.fig_height)
 
     # Plot edges
-    for edge in edges_dict.values():
-        xy1, xy2 = edge
-        x1, y1 = xy1
-        x2, y2 = xy2
-        plot_edge(ax, x1, y1, x2, y2, line_thickness)
+    for linestring in linestring_dict.values():
+        plot_edge(ax, linestring, line_thickness)
 
     # Plot shapes
     if random_seed is not None:
@@ -98,9 +95,9 @@ if __name__ == "__main__":
         ax.add_collection(p)
 
     # Plot nodes
-    for layer_id, layer_y_locs in node_loc_dict.items():
-        x = int(re.findall('[0-9]+', layer_id)[0])
-        for y in layer_y_locs:
+    for layer_id, layer_locs in node_loc_dict.items():
+        for xy in layer_locs:
+            x, y = xy
             ax.plot(x, y, 'o', markersize = node_size, color='black')
             ax.plot(x, y, 'o', markersize = node_size-2, color='white')
 
