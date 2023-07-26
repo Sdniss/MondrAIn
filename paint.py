@@ -50,6 +50,10 @@ if __name__ == "__main__":
                         help='Dots per inch, resolution of figure')
     parser.add_argument('--layer_sizes', nargs='+',
                         help='Number of nodes in each layer')
+    parser.add_argument('--fig_width', type=int, default=12,
+                        help='Figure width')
+    parser.add_argument('--fig_height', type=int, default = 6,
+                        help='Figure height')
     args = parser.parse_args()
     line_thickness = args.line_thickness
     shape_density = args.shape_density
@@ -69,7 +73,10 @@ if __name__ == "__main__":
         shape_candidates = pickle.load(f)
 
     # Initialise figure
+    # Source: https://stackoverflow.com/questions/14770735/how-do-i-change-the-figure-size-with-subplots
     fig, ax = plt.subplots()
+    fig.set_figwidth(args.fig_width)
+    fig.set_figheight(args.fig_height)
 
     # Plot edges
     for edge in edges_dict.values():
