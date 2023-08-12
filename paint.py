@@ -88,7 +88,7 @@ if __name__ == "__main__":
     np.random.shuffle(shape_candidates)
     n_shapes = round(len(shape_candidates) * shape_density)  # CAVE: np.round() method rounds 0.5 down
     for shape, color in zip(shape_candidates[:n_shapes],
-                               ['#E70503', '#0300AD', '#FDDE06', '#050103'] * n_shapes):
+                            ['#E70503', '#0300AD', '#FDDE06', '#050103', '#FFFFFF'] * n_shapes):
         # Colors source: https://color.adobe.com/De-Stijl---Piet-Mondrian-color-theme-6225068/
         polygon = Polygon(shape, closed = True)
         p = PatchCollection([polygon], color=color)
