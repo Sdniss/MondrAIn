@@ -50,7 +50,7 @@ if __name__ == "__main__":
                         help='Dots per inch, resolution of figure')
     parser.add_argument('--layer_sizes', nargs='+',
                         help='Number of nodes in each layer')
-    parser.add_argument('--fig_width', type=float, default=12,
+    parser.add_argument('--fig_width', type=float, default=6,
                         help='Figure width')
     parser.add_argument('--fig_height', type=float, default = 6,
                         help='Figure height')
