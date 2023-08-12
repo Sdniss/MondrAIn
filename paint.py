@@ -31,6 +31,24 @@ def plot_edge(ax, linestring, s):
     return ax
 
 
+def get_node_limits(node_dict):
+    # Get x and y limits of nodes
+    x_min = y_min = np.inf
+    x_max = y_max = 0
+    for coordinates in node_dict.values():
+        for coordinate in coordinates:
+            x, y = coordinate
+            if x < x_min:
+                x_min = x
+            if x > x_max:
+                x_max = x
+            if y < y_min:
+                y_min = y
+            if y > y_max:
+                y_max = y
+    return x_min, x_max, y_min, y_max
+
+
 if __name__ == "__main__":
     # Parse arguments
     parser = argparse.ArgumentParser()
@@ -77,6 +95,58 @@ if __name__ == "__main__":
     fig, ax = plt.subplots()
     fig.set_figwidth(args.fig_width)
     fig.set_figheight(args.fig_height)
+
+    # Create whitespace around the network
+    # - Space above and below nodes
+    x_min, x_max, y_min, y_max = get_node_limits(node_loc_dict)
+    lower_half = [(x_min, y_min)]
+    upper_half = [(x_min, y_max)]
+    for layer_i, node_locations in node_loc_dict.items():
+        lower_half.append(node_locations[0])
+        upper_half.append(node_locations[-1])
+    lower_half.append((x_max, y_min))
+    upper_half.append((x_max, y_max))
+    p = PatchCollection([Polygon(lower_half, closed = True), Polygon(upper_half, closed = True)], color='#FFFFFF')
+    ax.add_collection(p)
+
+    # - Left and right triangles
+    layer_0_nodes = node_loc_dict.get('layer_0')
+    layer_1_nodes = node_loc_dict.get('layer_1')
+    for i in range(len(layer_0_nodes)-1):
+        node_left_1 = layer_0_nodes[i]
+        node_left_2 = layer_0_nodes[i+1]
+        intersection_node_x = np.inf
+        for shape in shape_candidates:
+            for coordinate in shape:
+                if coordinate[0] != node_loc_dict.get('layer_0')[0][0] and coordinate[0] < intersection_node_x:
+                    intersection_node_x = coordinate[0]
+        intersection_node_y = None
+        for shape in shape_candidates:
+            for coordinate in shape:
+                if coordinate[0] == intersection_node_x and node_left_1[1] < coordinate[1] < node_left_2[1]:
+                    intersection_node_y = coordinate[1]
+        triangle = [node_left_1, node_left_2, (intersection_node_x, intersection_node_y)]
+        p = PatchCollection([Polygon(triangle, closed=True)], color='#FFFFFF')
+        ax.add_collection(p)
+
+    last_layer_nodes = node_loc_dict.get(f'layer_{len(layer_sizes)-1}')
+    before_last_layer_nodes = node_loc_dict.get(f'layer_{len(layer_sizes)-2}')
+    for i in range(len(last_layer_nodes)-1):
+        node_right_1 = last_layer_nodes[i]
+        node_right_2 = last_layer_nodes[i+1]
+        intersection_node_x = 0
+        for shape in shape_candidates:
+            for coordinate in shape:
+                if coordinate[0] != node_loc_dict.get(f'layer_{len(layer_sizes)-1}')[0][0] and coordinate[0] > intersection_node_x:
+                    intersection_node_x = coordinate[0]
+        intersection_node_y = None
+        for shape in shape_candidates:
+            for coordinate in shape:
+                if coordinate[0] == intersection_node_x and node_right_1[1] < coordinate[1] < node_right_2[1]:
+                    intersection_node_y = coordinate[1]
+        triangle = [node_right_1, node_right_2, (intersection_node_x, intersection_node_y)]
+        p = PatchCollection([Polygon(triangle, closed=True)], color='#FFFFFF')
+        ax.add_collection(p)
 
     # Plot edges
     for linestring in linestring_dict.values():
