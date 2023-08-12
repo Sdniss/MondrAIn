@@ -60,7 +60,7 @@ if __name__ == "__main__":
     node_size = args.node_size
     random_seed = args.random_seed
     dpi = args.dpi
-    layer_sizes = args.layer_sizes
+    layer_sizes = [int(layer_size) for layer_size in args.layer_sizes]
 
     # Load calculation outputs
     script_directory = os.path.dirname(os.path.abspath(sys.argv[0]))
